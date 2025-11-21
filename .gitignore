@@ -1,0 +1,3 @@
+/exploit/*.o
+/exploit/*.bin
+.DS_Store

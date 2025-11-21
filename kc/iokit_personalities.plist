@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AppleBCMWLANBusInterfaceSDIO</key>
+	<dict>
+		<key>N18 - 4329b1</key>
+		<dict>
+			<key>FilesDB</key>
+			<dict>
+				<key>default</key>
+				<dict>
+					<key>Firmware</key>
+					<string>4329b1/n18.bin</string>
+					<key>NVRAM</key>
+					<string>4329b1/n18.txt</string>
+				</dict>
+			</dict>
+			<key>IOClass</key>
+			<string>AppleBCMWLANBusInterfaceSdio</string>
+			<key>IONetworkRootType</key>
+			<string>airport</string>
+			<key>IOProviderClass</key>
+			<string>IOSDIOIoCardDevice</string>
+			<key>IOSDIOPropertyEquals</key>
+			<dict>
+				<key>IOSDIOManufacturerTuple</key>
+				<array>
+					<dict>
+						<key>IOSDIOManufacturerID</key>
+						<integer>720</integer>
+						<key>IOSDIOProductID</key>
+						<integer>17193</integer>
+					</dict>
+				</array>
+			</dict>
+			<key>IOSDIOStringContains</key>
+			<dict>
+				<key>IOSDIOProductInfo0</key>
+				<array>
+					<string>s=B1</string>
+				</array>
+				<key>IOSDIOProductInfo1</key>
+				<array>
+					<string>P=N18</string>
+				</array>
+			</dict>
+			<key>IOUserClientClass</key>
+			<string>AppleBCMWLANUserClient</string>
+			<key>SDIOClockLimit</key>
+			<integer>20250000</integer>
+		</dict>
+	</dict>
+</dict>
+</plist>
