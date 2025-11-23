@@ -15,8 +15,7 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
 ## Tutorial
 
 ### Requirements
-* A computer running Mac OS X 10.8+
-    * Easy to port to Linux and even Windows - basically, you need to recompile everything under `executables/` for these platforms
+* A computer running a modern Linux distro (x86_64 and arm64 supported)
 
 * Python 3.7+
 
@@ -44,16 +43,11 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
         1f7a37b35ca8b1b42813a9e7773726f10faf9b0c0b0bacbc6057ecd6ab9d244d  artifacts/kernelcache.n18ap.bin
         ```
 * Pwned DFU tool
-    * For modern Mac OS X (11.x Big Sur+) I recommend [iPwnder32](https://github.com/dora2ios/iPwnder32) by **dora2ios**
-    * For older ones [ipwndfu](https://github.com/axi0mX/ipwndfu) by **axi0mX** should do fine
+    * For Linux, my fork of ipwnder will work: https://github.com/LukeZGD/iPwnder32/releases
 
 ### Steps
 
-0. This repository contains precompiled executables that I built statically for your convinience ("statically" in terms of external dependencies). Modern Mac OS X might put them on quarantine and refuse to run them. To get rid of this restriction, remove extended attributes from all the files in `executables/`
-
-    ```shell
-    ➜  SundanceInH2A git:(master) ✗ xattr -cr executables
-    ```
+0. This repository contains precompiled executables that I built statically for your convinience ("statically" in terms of external dependencies).
 
 1. Change working directory to the downloaded repo and execute:
 
