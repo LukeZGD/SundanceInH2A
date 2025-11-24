@@ -1,5 +1,7 @@
 # SundanceInH2A
 
+Fork with Linux support
+
 Run iOS 6 on your iPod touch 3!
 
 Apple never released iOS 6 for iPod touch 3rd-generation (2009). 13 years later I decided to fix it
@@ -32,7 +34,7 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
     * This was never published by Apple in any form, but it's doable to assemble it from internal iOS 6 builds. Instructions eta son, but for time being... I *heard* that executing this command will yield a good kernelcache you can feed to this tool:
 
         ```shell
-        curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/7fa62c2cb54855d72b2a91c2aa3d57cab7318246/magic-A63970m.b64 | base64 -D | gunzip > kernelcache.n18ap.bin
+        curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/7fa62c2cb54855d72b2a91c2aa3d57cab7318246/magic-A63970m.b64 | base64 -d | gunzip > kernelcache.n18ap.bin
         ```
 
     * Put it into `artifacts/kernelcache.n18ap.bin`
@@ -102,10 +104,10 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
     Device is now in pwned DFU mode!
     ```
 
-3. Start restore! `idevicerestore` is provided by this repo under `executables/`
+3. Start restore! `idevicerestore` is provided by this repo under `executables/(arch)`. For example:
 
     ```shell
-    ➜  SundanceInH2A git:(master) ✗ executables/idevicerestore -ey iPod3,1_6.0_10A403_Custom
+    ➜  SundanceInH2A git:(master) ✗ executables/x86_64/idevicerestore -ey iPod3,1_6.0_10A403_Custom
     ```
 
 Restore is going to take around 5 minutes. If everything goes well, you'll end up on iOS 6 setup screen
@@ -125,7 +127,7 @@ I patched iBEC to allow arbitrary NVRAM variable change, so you can remove it wi
 
 4. Your iPod should light up its' display and appear on USB
 
-5. Now you need `irecovery` which is included in `executables/`
+5. Now you need `irecovery` which is included in `executables/(arch)`
 
     ```shell
     # reset the variable
