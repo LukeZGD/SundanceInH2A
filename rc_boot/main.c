@@ -266,9 +266,6 @@ int exploit_install() {
     REQUIRE_NOERR(nvram_set(
         "debug-uarts", "3"), out);
 
-    REQUIRE_NOERR(nvram_set(
-        "boot-args", "amfi=0xff cs_enforcement_disable=1"), out);
-
     ret = 0;
 
 out:
