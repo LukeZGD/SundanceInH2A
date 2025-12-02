@@ -15,6 +15,10 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
 ## Changelog
 <details>
 
+### rev2
+
+* Added jailbreak option (`-j` flag)
+
 ### rev1a
 * Fixed the exploit to work on iPod touch 3's with 4096 bytes block size NANDs
 
@@ -61,6 +65,17 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
         ➜  SundanceInH2A git:(master) ✗ shasum -a 256 artifacts/kernelcache.n18ap.bin 
         1f7a37b35ca8b1b42813a9e7773726f10faf9b0c0b0bacbc6057ecd6ab9d244d  artifacts/kernelcache.n18ap.bin
         ```
+
+    * Jailbreak option needs a different kernel, put it into `artifacts/kernelcache.jailbroken.n18ap.bin`
+        ```shell
+            # download the kernel
+            ➜  SundanceInH2A git:(feat-jb) ✗ curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/fc04cc3ffd08e94130809a6fea15dca96922752b/magic-A63970m-jb.b64 | base64 -D | gunzip > kernelcache.jailbroken.n18ap.bin
+
+            # validate SHA-256
+            ➜  SundanceInH2A git:(feat-jb) ✗ shasum -a 256 artifacts/kernelcache.jailbroken.n18ap.bin 
+            da608cf6c65c15aa0923ef52e83e0e53bb05d988897ba1c14e9fff29d81c61ed  artifacts/kernelcache.jailbroken.n18ap.bin
+        ```
+
 * Pwned DFU tool
     * For modern Mac OS X (11.x Big Sur+) I recommend [iPwnder32](https://github.com/dora2ios/iPwnder32) by **dora2ios**
     * For older ones [ipwndfu](https://github.com/axi0mX/ipwndfu) by **axi0mX** should do fine
@@ -78,6 +93,8 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
     ```shell
     ➜  SundanceInH2A git:(master) ✗ ./Sundancer iPod3,1_5.1.1_9B206_Restore.ipsw iPhone2,1_6.0_10A403_Restore.ipsw iPod3,1_6.0_10A403_Custom
     ```
+
+    Add `-j` option to apply jailbreak (on **rev2** and later)
 
     Change the paths accordingly, of course
 
@@ -194,7 +211,15 @@ irecovery -n
 
 ## Known issues
 
-* Some Wi-Fi networks cannot be joined, however they cannot be joined on iOS 5.1.1 either
+* Sometimes, Wi-Fi reconnects every minute or so
+    * Might be related to my router or something
+
+* Some iPods sold in China cannot use Wi-Fi
+    * Might be related to **WAPI** and corresponding daemon (`wapic`)
 
 * Built-in speaker seems to be less loud compared to iOS 5
     * Headphones work fine
+    * Probably related to missing hardware-specific plists in `MediaToolbox` framework
+
+* Bluetooth audio devices cannot actually play
+    * Seems to be related to `VirtualAudio` bundle, and it's a mess
