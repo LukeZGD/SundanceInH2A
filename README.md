@@ -69,11 +69,11 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
     * Jailbreak option needs a different kernel, put it into `artifacts/kernelcache.jailbroken.n18ap.bin`
         ```shell
             # download the kernel
-            ➜  SundanceInH2A git:(feat-jb) ✗ curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/fc04cc3ffd08e94130809a6fea15dca96922752b/magic-A63970m-jb.b64 | base64 -D | gunzip > kernelcache.jailbroken.n18ap.bin
+            ➜  SundanceInH2A git:(feat-jb) ✗ curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64 | base64 -D | gunzip > kernelcache.jailbroken.n18ap.bin
 
             # validate SHA-256
             ➜  SundanceInH2A git:(feat-jb) ✗ shasum -a 256 artifacts/kernelcache.jailbroken.n18ap.bin 
-            da608cf6c65c15aa0923ef52e83e0e53bb05d988897ba1c14e9fff29d81c61ed  artifacts/kernelcache.jailbroken.n18ap.bin
+            17b230be63bf4760e3098c63316b3c1333a579c2664e0509cd9baac9508ae001  artifacts/kernelcache.jailbroken.n18ap.bin
         ```
 
 * Pwned DFU tool
