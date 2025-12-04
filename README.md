@@ -39,7 +39,7 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
 ## Tutorial
 
 ### Requirements
-* A computer running a modern Linux distro (x86_64 and arm64 supported)
+* A computer running a modern Linux distro (x86_64 and arm64/aarch64 supported)
 
 * Python 3.7+
 
@@ -70,7 +70,7 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
     * Jailbreak option needs a different kernel, put it into `artifacts/kernelcache.jailbroken.n18ap.bin`
         ```shell
         # download the kernel
-        ➜  SundanceInH2A git:(feat-jb) ✗ curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64 | base64 -D | gunzip > kernelcache.jailbroken.n18ap.bin
+        ➜  SundanceInH2A git:(feat-jb) ✗ curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64 | base64 -d | gunzip > kernelcache.jailbroken.n18ap.bin
 
         # validate SHA-256
         ➜  SundanceInH2A git:(feat-jb) ✗ shasum -a 256 artifacts/kernelcache.jailbroken.n18ap.bin 
