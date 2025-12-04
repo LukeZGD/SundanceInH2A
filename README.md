@@ -14,6 +14,28 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
 
 ![](repo/demo.jpg)
 
+## Changelog
+<details>
+
+### rev2
+
+* Added jailbreak option (`-j` flag)
+
+### rev1a
+* Fixed the exploit to work on iPod touch 3's with 4096 bytes block size NANDs
+
+* Unlimited `absinthed` & `securekeyvaultd` daemons (were limited to iPhone 3GS by default)
+    * They are something related to device attestation, DRM and etc.
+    * IDK if it actually improves something, hopefully doesn't break anything at least
+
+### rev1
+* Initial release
+
+</details>
+
+## Technical write-up
+[Here](https://nyansatan.github.io/run-unsupported-ios)
+
 ## Tutorial
 
 ### Requirements
@@ -44,6 +66,17 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
         ➜  SundanceInH2A git:(master) ✗ shasum -a 256 artifacts/kernelcache.n18ap.bin 
         1f7a37b35ca8b1b42813a9e7773726f10faf9b0c0b0bacbc6057ecd6ab9d244d  artifacts/kernelcache.n18ap.bin
         ```
+
+    * Jailbreak option needs a different kernel, put it into `artifacts/kernelcache.jailbroken.n18ap.bin`
+        ```shell
+        # download the kernel
+        ➜  SundanceInH2A git:(feat-jb) ✗ curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64 | base64 -D | gunzip > kernelcache.jailbroken.n18ap.bin
+
+        # validate SHA-256
+        ➜  SundanceInH2A git:(feat-jb) ✗ shasum -a 256 artifacts/kernelcache.jailbroken.n18ap.bin 
+        17b230be63bf4760e3098c63316b3c1333a579c2664e0509cd9baac9508ae001  artifacts/kernelcache.jailbroken.n18ap.bin
+        ```
+
 * Pwned DFU tool
     * For Linux, my fork of ipwnder will work: https://github.com/LukeZGD/iPwnder32/releases
 
@@ -56,6 +89,8 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
     ```shell
     ➜  SundanceInH2A git:(master) ✗ ./Sundancer iPod3,1_5.1.1_9B206_Restore.ipsw iPhone2,1_6.0_10A403_Restore.ipsw iPod3,1_6.0_10A403_Custom
     ```
+
+    Add `-j` option to apply jailbreak (on **rev2** and later)
 
     Change the paths accordingly, of course
 
@@ -172,10 +207,15 @@ irecovery -n
 
 ## Known issues
 
-* Some Wi-Fi networks cannot be joined, however they cannot be joined on iOS 5.1.1 either
+* Sometimes, Wi-Fi reconnects every minute or so
+    * Might be related to my router or something
+
+* Some iPods sold in China cannot use Wi-Fi
+    * Might be related to **WAPI** and corresponding daemon (`wapic`)
 
 * Built-in speaker seems to be less loud compared to iOS 5
     * Headphones work fine
+    * Probably related to missing hardware-specific plists in `MediaToolbox` framework
 
-## Technical write-up
-*eta son*
+* Bluetooth audio devices cannot actually play
+    * Seems to be related to `VirtualAudio` bundle, and it's a mess

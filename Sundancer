@@ -83,6 +83,12 @@ SUNDANCE_DSC_PATCHES = {
     0xE39EA4A: bytes.fromhex("439b458669a3fd901a655985694e3f57c258a24a")
 }
 
+SUNDANCE_LAUNCH_DAEMONS_TO_UNLIMIT = [
+    "/System/Library/LaunchDaemons/com.apple.absinthed.N88.plist",
+    "/System/Library/LaunchDaemons/com.apple.fairplayd.N88.plist",
+    "/System/Library/LaunchDaemons/com.apple.securekeyvaultd.N88.plist"
+]
+
 SUNDANCE_RAMDISK_IV = "404e344acc3ab148a3d90997f00aa308"
 SUNDANCE_RAMDISK_KEY = "96bbec672f7c5533250f4fa14798647031b5913843d00d8a4c9b6ebec0664f55"
 
@@ -247,6 +253,7 @@ class BuildIdentity:
         self.device = raw["Info"]["DeviceClass"]
         self.restore_behavior = raw["Info"]["RestoreBehavior"]
         self.build_train = raw["Info"]["BuildTrain"]
+        self.minimum_system_partition = raw["Info"]["MinimumSystemPartition"]
         self.components = { k:v["Info"]["Path"] for k,v in raw["Manifest"].items() }
 
         debug("loaded build identity for %s (%s)" % (self.device, self.restore_behavior))
@@ -429,7 +436,25 @@ def hoodoo_process_iboots(wd: Path, ipsw: IPSW, build_identity: BuildIdentity) -
 
     return result
 
-def sundance_process_root_filesystem(wd: Path, ipsw: IPSW, build_identity: BuildIdentity, to_add: "list[AddFile]") -> str:
+def _unlimit_launch_daemon(wd: Path, dmg_path: Path, launch_daemon: str):
+    log("unlimiting %s LaunchDaemon" % os.path.basename(launch_daemon))
+
+    plist_tmp_path = wd / "launch_daemon.plist"
+    hfsplus_extract(dmg_path, launch_daemon, plist_tmp_path)
+
+    with open(plist_tmp_path, "rb") as f:
+        plist = plistlib.load(f)
+        del plist["LimitLoadToHardware"]
+
+    with open(plist_tmp_path, "wb") as f:
+        plistlib.dump(plist, f, fmt=plistlib.FMT_XML)
+
+    hfsplus_replace(dmg_path, plist_tmp_path, launch_daemon)
+    plist_tmp_path.unlink()
+
+JAILBREAK_ROOTFS_MIBS = 128
+
+def sundance_process_root_filesystem(wd: Path, ipsw: IPSW, build_identity: BuildIdentity, to_add: "list[AddFile]", jailbreak: bool = False) -> str:
     log("extracting iOS 6 root filesystem")
 
     os_orig_path = wd / extract_comp("OS", wd, ipsw, build_identity)
@@ -449,19 +474,8 @@ def sundance_process_root_filesystem(wd: Path, ipsw: IPSW, build_identity: Build
     hfsplus_replace(os_raw_path, dsc_tmp_path, "/System/Library/Caches/com.apple.dyld/dyld_shared_cache_armv7", mode=0o755)
     dsc_tmp_path.unlink()
 
-    log("patching FairPlay LaunchDaemon")
-    fairplay_plist_tmp_path = wd / "fairplay.plist"
-    hfsplus_extract(os_raw_path, "/System/Library/LaunchDaemons/com.apple.fairplayd.N88.plist", fairplay_plist_tmp_path)
-
-    with open(fairplay_plist_tmp_path, "rb") as f:
-        plist = plistlib.load(f)
-        del plist["LimitLoadToHardware"]
-
-    with open(fairplay_plist_tmp_path, "wb") as f:
-        plistlib.dump(plist, f, fmt=plistlib.FMT_XML)
-
-    hfsplus_replace(os_raw_path, fairplay_plist_tmp_path, "/System/Library/LaunchDaemons/com.apple.fairplayd.N88.plist")
-    fairplay_plist_tmp_path.unlink()
+    for ld in SUNDANCE_LAUNCH_DAEMONS_TO_UNLIMIT:
+        _unlimit_launch_daemon(wd, os_raw_path, ld)
 
     # `hfsplus` messes up if we create already existing folders/files,
     # `hfsplus` messes up if add files to non-existing folders,
@@ -508,6 +522,19 @@ def sundance_process_root_filesystem(wd: Path, ipsw: IPSW, build_identity: Build
     tar.close()
     hfsplus_untar(os_raw_path, tar_path, "/")
     tar_path.unlink()
+
+    if jailbreak:
+        log("growing root filesystem")
+        hfsplus_grow(os_raw_path, (build_identity.minimum_system_partition + JAILBREAK_ROOTFS_MIBS) * 1024 * 1024)
+
+        log("unpacking Cydia tarball")
+        hfsplus_untar(os_raw_path, RESOURCES_ROOT / "Cydia.tar", "/")
+
+        with tempfile.NamedTemporaryFile() as f:
+            hfsplus_add(os_raw_path, Path(f.name), "/.cydia_no_stash")
+
+        log("replacing fstab")
+        hfsplus_replace(os_raw_path, RESOURCES_ROOT / "fstab", "/private/etc/fstab")
 
     # breaks everything, unfortunately
     # hfsplus_mv(os_raw_path, "/", "/%s%s.N18OS" % (build_identity.build_train, ipsw.manifest.build))
@@ -612,6 +639,7 @@ def process(args):
         patched_comps.update(hoodoo_process_iboots(wd, hoodoo_ipsw, hoodoo_identity))
 
         log("packaging kernelcache")
+
         patched_comps["KernelCache"] = patched_comps["RestoreKernelCache"] = hoodoo_replace_comp("KernelCache", HOODOO_KERNELCACHE_IV, HOODOO_KERNELCACHE_KEY, args.kernel, wd, hoodoo_ipsw, hoodoo_identity)
 
         log("packaging DeviceTree")
@@ -621,7 +649,7 @@ def process(args):
         add_files += hoodoo_extract_firmwares(wd, hoodoo_ipsw, hoodoo_identity)
         add_files += _add_misc_files()
 
-        patched_comps["OS"] = sundance_process_root_filesystem(wd, sundance_ipsw, sundance_identity, add_files)
+        patched_comps["OS"] = sundance_process_root_filesystem(wd, sundance_ipsw, sundance_identity, add_files, args.jailbreak)
         patched_comps["RestoreRamDisk"] = sundance_process_ramdisk(wd, sundance_ipsw, sundance_identity)
 
         assemble_bundle(
@@ -635,7 +663,9 @@ def process(args):
 
 SCRIPT_ROOT = Path(__file__).parent
 RESOURCES_ROOT = Path(__file__).parent / "resources"
+
 DEFAULT_KERNEL = SCRIPT_ROOT / "artifacts" / "kernelcache.n18ap.bin"
+DEFAULT_JAILBROKEN_KERNEL = SCRIPT_ROOT / "artifacts" / "kernelcache.jailbroken.n18ap.bin"
 DEFAULT_DEVICE_TREE = SCRIPT_ROOT / "artifacts" / "DeviceTree.n18ap.bin"
 
 def main():
@@ -643,11 +673,11 @@ def main():
     parser.add_argument("hoodoo", type=Path, help="path to iPod touch 3 5.1.1 (9B206) IPSW")
     parser.add_argument("sundance", type=Path, help="path to iPhone 3GS 6.0 (10A403) IPSW")
     parser.add_argument("output", type=Path, help="output IPSW to flash")
+    parser.add_argument("-j", "--jailbreak", action="store_true", help="apply jailbreak")
     parser.add_argument(
         "-k", "--kernel",
         type=Path,
-        default=DEFAULT_KERNEL,
-        help="path to kernel, default - " + str(DEFAULT_KERNEL.relative_to(SCRIPT_ROOT))
+        help="path to kernel, default - the one in artifacts/"
     )
     parser.add_argument(
         "-d", "--devicetree",
@@ -658,6 +688,12 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="verbose logging")
 
     args = parser.parse_args()
+
+    if not args.kernel:
+        if args.jailbreak:
+            args.kernel = DEFAULT_JAILBROKEN_KERNEL
+        else:
+            args.kernel = DEFAULT_KERNEL
 
     _debug_init(args.verbose)
 

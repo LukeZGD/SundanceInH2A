@@ -1,3 +1,5 @@
 /exploit/*.o
 /exploit/*.bin
 .DS_Store
+/restore_*.log
+/artifacts/kernelcache*
