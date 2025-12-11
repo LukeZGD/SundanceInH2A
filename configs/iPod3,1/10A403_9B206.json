@@ -1,0 +1,164 @@
+{
+    "source_ipsw": {
+        "device": "n18ap",
+        "build": "9B206",
+        "manifest": [
+            {
+                "component": "iBSS",
+                "iv": "e803340e5c0ac2d1c898f6980285e67e",
+                "key": "406b5d2678c9292cf3c5af199ba962aa23db115a9d7160fa1bd09fd9932160d9",
+                "patches": [
+                    {
+                        "name": "Image3 signature check",
+                        "offset": "0x50C4",
+                        "patch": "00 20 18 60"
+                    }
+                ]
+            },
+            {
+                "component": "iBEC",
+                "iv": "a160c55d4571b060bb82689e2f10d4ef",
+                "key": "457d910bc7fd0ef6b71d2714d20d9a70cbc741e863ae57883dba4568d29912d4",
+                "patches": [
+                    {
+                        "name": "Image3 signature check",
+                        "offset": "0x11944",
+                        "patch": "00 20 18 60"
+                    },
+                    {
+                        "name": "debug-enabled",
+                        "offset": "0x11F48",
+                        "patch": "01 20 01 20"
+                    },
+                    {
+                        "name": "boot-args injection",
+                        "offset": "0x12E68",
+                        "patch": "38 C4 F2 4F 38 C4 F2 4F"
+                    },
+                    {
+                        "name": "boot-args",
+                        "offset": "0x2C438",
+                        "patch": "rd=md0 nand-enable-reformat=1 -progress amfi=0xff serial=3"
+                    },
+                    {
+                        "name": "allow any var in `setenv`",
+                        "offset": "0xF0F4",
+                        "patch": "00 BF"
+                    }
+                ]
+            },
+            {
+                "component": "DeviceTree",
+                "iv": "f5596138fe9a0d428648309504bcc130",
+                "key": "55f81e535541c1dcbdfa6eae4361cffa1c8930d79e40c98d5c1de27fd16946c8"
+            },
+            {
+                "component": "KernelCache",
+                "iv": "5d618983129f3b121ad032dc0a170ea9",
+                "key": "835138e000a3d9425cc1d0d57cacd55ea6a7e46a42fac59dd55f98cb80240fe3"
+            },
+            {
+                "component": "OS",
+                "key": "33148831d924a6ea1e9f1051cb0abfb15dc481a91617f37d950612de185c5f182d963a15",
+                "copy_files": [
+                    "/usr/share/firmware/multitouch/Common.mtprops",
+                    "/usr/share/firmware/multitouch/iPod.mtprops",
+                    "/usr/share/firmware/wifi/4329b1/n18.bin",
+                    "/usr/share/firmware/wifi/4329b1/n18.txt"
+                ],
+                "bluetooth": {
+                    "filename": "BCM4329B1_002.002.023.0965.0967_N18_090611.hcd",
+                    "offset": "0x9E810",
+                    "length": "0x4346"
+                }
+            }
+        ]
+    },
+    "base_ipsw": {
+        "device": "n88ap",
+        "build": "10A403",
+        "manifest": [
+            {
+                "component": "OS",
+                "key": "9b80f46bffd90f2507fd1978df3d72e933ac0f894b8ff13aca73f2ef6b822186a4075236",
+                "launchdaemons_to_unlimit": [
+                    "/System/Library/LaunchDaemons/com.apple.absinthed.N88.plist",
+                    "/System/Library/LaunchDaemons/com.apple.fairplayd.N88.plist",
+                    "/System/Library/LaunchDaemons/com.apple.securekeyvaultd.N88.plist"
+                ],
+                "file_patches": [
+                    {
+                        "path": "/System/Library/Caches/com.apple.dyld/dyld_shared_cache_armv7",
+                        "patches": [
+                            {
+                                "name": "getDeviceVariant() to CFSTR(\"A\")",
+                                "offset": "0x7C71A88",
+                                "patch": "47 F6 14 00 C0 F2 A8 20 78 44 70 47"
+                            },
+                            {
+                                "name": "Product ID",
+                                "offset": "0x7C77D70",
+                                "patch": "15 27"
+                            },
+                            {
+                                "name": "page 31857 new hash",
+                                "offset": "0xE39E9D2",
+                                "patch": "dbe3d106732b6f8ce73e72293b80633efdf7414e"
+                            },
+                            {
+                                "name": "page 31863 new hash",
+                                "offset": "0xE39EA4A",
+                                "patch": "439b458669a3fd901a655985694e3f57c258a24a"
+                            }
+                        ]
+                    }
+                ],
+                "copy_embedded_files": [
+                    {
+                        "embedded" : "N18AP.plist",
+                        "dest" : "/System/Library/CoreServices/SpringBoard.app/N18AP.plist"
+                    },
+                    {
+                        "embedded" : "8784ae8d7066b0f0136be91dcfe632a436ffd6fb.boot.script",
+                        "dest" : "/private/etc/bluetool/8784ae8d7066b0f0136be91dcfe632a436ffd6fb.boot.script"
+                    },
+                    {
+                        "embedded" : "8784ae8d7066b0f0136be91dcfe632a436ffd6fb.init.script",
+                        "dest" : "/private/etc/bluetool/8784ae8d7066b0f0136be91dcfe632a436ffd6fb.init.script"
+                    },
+                    {
+                        "embedded" : "8784ae8d7066b0f0136be91dcfe632a436ffd6fb.deepsleep.script",
+                        "dest" : "/private/etc/bluetool/8784ae8d7066b0f0136be91dcfe632a436ffd6fb.deepsleep.script"
+                    }
+                ]
+            },
+            {
+                "component": "RestoreRamDisk",
+                "iv": "404e344acc3ab148a3d90997f00aa308",
+                "key": "96bbec672f7c5533250f4fa14798647031b5913843d00d8a4c9b6ebec0664f55",
+                "file_patches": [
+                    {
+                        "path": "/usr/sbin/asr",
+                        "patches": [
+                            {
+                                "name": "Image signature check",
+                                "offset": "0x12EC8",
+                                "patch": "F2 E7"
+                            },
+                            {
+                                "name": "page 19 new hash",
+                                "offset": "0x2BF62",
+                                "patch": "1e7b497288ea86b9dda5e8d5a88e72dcb44d5e73"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "defaults": {
+        "Kernelcache": "kernelcache.n18ap.bin",
+        "KernelcacheJailbroken": "kernelcache.jailbroken.n18ap.bin",
+        "DeviceTree": "DeviceTree.n18ap.bin"
+    }
+}

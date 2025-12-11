@@ -1,103 +1,89 @@
 #!/usr/bin/env python3
 
-# ghetto IPSW patcher, or I'd rather even say *merger*
-
 import os
 import time
+import json
 import shutil
 import zipfile
 import tarfile
 import tempfile
-import plistlib
 import argparse
+import plistlib
 import subprocess
 from pathlib import Path
-from dataclasses import dataclass
+from typing import List
+from dataclasses import dataclass, fields, is_dataclass
 
 # ===================== patch config =====================
 
-# XXX move all this to a separate entity?
-# Will have to do it anyway when we support more combos
+def hexint(s: str):
+    return int(s, 16)
 
-HOODOO_IBSS_IV = "e803340e5c0ac2d1c898f6980285e67e"
-HOODOO_IBSS_KEY = "406b5d2678c9292cf3c5af199ba962aa23db115a9d7160fa1bd09fd9932160d9"
+def BytesOrString(s: str):
+    try:
+        return bytes.fromhex(s)
+    except ValueError:
+        return s.encode("ascii") + b"\0"
 
-HOODOO_IBSS_PATCHES = {
-    # Image3 signature check
-    0x50C4 : bytes.fromhex("00 20 18 60")
-}
+@dataclass
+class Patch:
+    name: str
+    offset: hexint
+    patch: BytesOrString
 
-HOODOO_IBEC_IV = "a160c55d4571b060bb82689e2f10d4ef"
-HOODOO_IBEC_KEY = "457d910bc7fd0ef6b71d2714d20d9a70cbc741e863ae57883dba4568d29912d4"
+@dataclass
+class FilePatch:
+    path: str
+    patches: List[Patch]
 
-HOODOO_KERNELCACHE_IV = "5d618983129f3b121ad032dc0a170ea9"
-HOODOO_KERNELCACHE_KEY = "835138e000a3d9425cc1d0d57cacd55ea6a7e46a42fac59dd55f98cb80240fe3"
+@dataclass
+class CopyEmbeddedResource:
+    embedded: str
+    dest: str
 
-HOODOO_DEVICETREE_IV = "f5596138fe9a0d428648309504bcc130"
-HOODOO_DEVICETREE_KEY = "55f81e535541c1dcbdfa6eae4361cffa1c8930d79e40c98d5c1de27fd16946c8"
+@dataclass
+class Bluetooth:
+    filename: str
+    offset: hexint
+    length: hexint
 
-HOODOO_IBEC_PATCHES = {
-    # Image3 signature check
-    0x11944 : bytes.fromhex("00 20 18 60"),
+@dataclass
+class ManifestItem:
+    component: str
+    iv: str = None
+    key: str = None
+    patches: List[Patch] = None
+    copy_files: List[str] = None
+    launchdaemons_to_unlimit: List[str] = None
+    file_patches: List[FilePatch] = None
+    copy_embedded_files: List[CopyEmbeddedResource] = None
+    bluetooth: Bluetooth = None
 
-    # debug-enabled
-    0x11F48 : bytes.fromhex("01 20 01 20"),
+@dataclass
+class IPSWConfig:
+    device: str
+    build: str
+    manifest: List[ManifestItem]
 
-    # boot-args injection
-    0x12E68 : bytes.fromhex("38 C4 F2 4F 38 C4 F2 4F"),
+    def component(self, comp: str):
+        return next(filter(lambda x: x.component == comp, self.manifest))
 
-    # boot-args
-    0x2C438 : b"rd=md0 nand-enable-reformat=1 -progress amfi=0xff serial=3\0",
+@dataclass
+class Config:
+    source_ipsw: IPSWConfig
+    base_ipsw: IPSWConfig
+    defaults: dict
 
-    # allow any var in `setenv`
-    0xF0F4 : bytes.fromhex("00 BF")
-}
+def dataclass_from_dict(cls, d):
+    if isinstance(d, list):
+        (inner,) = cls.__args__
+        return [dataclass_from_dict(inner, i) for i in d]
 
-HOODOO_ROOT_FS_KEY = "33148831d924a6ea1e9f1051cb0abfb15dc481a91617f37d950612de185c5f182d963a15"
-
-HOODOO_ROOT_FS_FILES = [
-    "/usr/share/firmware/multitouch/Common.mtprops",
-    "/usr/share/firmware/multitouch/iPod.mtprops",
-    "/usr/share/firmware/wifi/4329b1/n18.bin",
-    "/usr/share/firmware/wifi/4329b1/n18.txt"
-]
-
-HOODOO_BLUETOOTH_FW_NAME = "BCM4329B1_002.002.023.0965.0967_N18_090611.hcd"
-HOODOO_BLUETOOL_FW_OFF = 0x9E810
-HOODOO_BLUETOOL_FW_LEN = 0x4346
-
-SUNDANCE_ROOT_FS_KEY = "9b80f46bffd90f2507fd1978df3d72e933ac0f894b8ff13aca73f2ef6b822186a4075236"
-
-SUNDANCE_DSC_PATCHES = {
-    # getDeviceVariant() => CFSTR("A")
-    0x7C71A88: bytes.fromhex("47 F6 14 00 C0 F2 A8 20 78 44 70 47"),
-
-    # Product ID
-    0x7C77D70: bytes.fromhex("15 27"),
-
-    # page 31857 new hash
-    0xE39E9D2: bytes.fromhex("dbe3d106732b6f8ce73e72293b80633efdf7414e"),
-
-    # page 31863 new hash
-    0xE39EA4A: bytes.fromhex("439b458669a3fd901a655985694e3f57c258a24a")
-}
-
-SUNDANCE_LAUNCH_DAEMONS_TO_UNLIMIT = [
-    "/System/Library/LaunchDaemons/com.apple.absinthed.N88.plist",
-    "/System/Library/LaunchDaemons/com.apple.fairplayd.N88.plist",
-    "/System/Library/LaunchDaemons/com.apple.securekeyvaultd.N88.plist"
-]
-
-SUNDANCE_RAMDISK_IV = "404e344acc3ab148a3d90997f00aa308"
-SUNDANCE_RAMDISK_KEY = "96bbec672f7c5533250f4fa14798647031b5913843d00d8a4c9b6ebec0664f55"
-
-SUNDANCE_ASR_PATCHES = {
-    # Image signature check
-    0x12EC8: bytes.fromhex("F2 E7"),
-
-    # page 19 new hash
-    0x2BF62: bytes.fromhex("1e7b497288ea86b9dda5e8d5a88e72dcb44d5e73")
-}
+    if is_dataclass(cls):
+        fieldtypes = {f.name:f.type for f in fields(cls)}
+        return cls(**{f:dataclass_from_dict(fieldtypes[f],d[f]) for f in d})
+    else:
+        return cls(d)
 
 SUNDANCE_RAMDISK_SIZE = 16 * 1024 * 1024
 
@@ -245,8 +231,9 @@ def hfsplus_untar(dmg: Path, tar: Path, dest: str):
 # ===================== IPSW parsing =====================
 
 class BuildIdentity:
-    def __init__(self, raw: dict):
+    def __init__(self, raw: dict, manifest: "BuildManifest"):
         self.raw = raw
+        self.manifest = manifest
         self.chip_id = raw["ApChipID"]
         self.board_id = raw["ApBoardID"]
         self.device = raw["Info"]["DeviceClass"]
@@ -265,7 +252,7 @@ class BuildManifest:
         self.identities = list()
 
         for i in self.raw["BuildIdentities"]:
-            self.identities.append(BuildIdentity(i))
+            self.identities.append(BuildIdentity(i, self))
 
         debug("loaded build manifest for iOS %s (%s)" % (self.version, self.build))
 
@@ -312,26 +299,6 @@ class AddFile:
     gid: int = 0
     mode: int = 0o644
 
-def _add_misc_files() -> "list[AddFile]":
-    return [
-        AddFile(
-            RESOURCES_ROOT / "N18AP.plist",
-            "/System/Library/CoreServices/SpringBoard.app/N18AP.plist"
-        ),
-        AddFile(
-            RESOURCES_ROOT / "8784ae8d7066b0f0136be91dcfe632a436ffd6fb.boot.script",
-            "/private/etc/bluetool/8784ae8d7066b0f0136be91dcfe632a436ffd6fb.boot.script"
-        ),
-        AddFile(
-            RESOURCES_ROOT / "8784ae8d7066b0f0136be91dcfe632a436ffd6fb.init.script",
-            "/private/etc/bluetool/8784ae8d7066b0f0136be91dcfe632a436ffd6fb.init.script"
-        ),
-        AddFile(
-            RESOURCES_ROOT / "8784ae8d7066b0f0136be91dcfe632a436ffd6fb.deepsleep.script",
-            "/private/etc/bluetool/8784ae8d7066b0f0136be91dcfe632a436ffd6fb.deepsleep.script"
-        )
-    ]
-
 def hoodoo_extract_firmwares(wd: Path, ipsw: IPSW, build_identity: BuildIdentity) -> "list[AddFile]":
     result = []
 
@@ -339,52 +306,55 @@ def hoodoo_extract_firmwares(wd: Path, ipsw: IPSW, build_identity: BuildIdentity
     os_orig_path = wd / extract_comp("OS", wd, ipsw, build_identity)
     os_raw_path = os_orig_path.with_name("HoodooOS.dmg")
 
-    dmg_extract(os_orig_path, os_raw_path, HOODOO_ROOT_FS_KEY)
+    os_cfg = gCfg.source_ipsw.component("OS")
+    dmg_extract(os_orig_path, os_raw_path, os_cfg.key)
     os_orig_path.unlink()
 
-    log("extracting WLAN & multitouch firmwares")
+    if os_cfg.copy_files:
+        log("extracting WLAN & multitouch firmwares")
 
-    for f in HOODOO_ROOT_FS_FILES:
-        hfsplus_extract(os_raw_path, f, wd / os.path.basename(f))
+        for f in os_cfg.copy_files:
+            hfsplus_extract(os_raw_path, f, wd / os.path.basename(f))
+            result.append(AddFile(
+                wd / os.path.basename(f),
+                f
+            ))
+
+    if os_cfg.bluetooth:
+        log("extracting Bluetooth firmware")
+
+        bluetool_path = wd / "BlueTool"
+        hfsplus_extract(os_raw_path, "/usr/sbin/BlueTool", bluetool_path)
+
+        with open(bluetool_path, "rb") as f:
+            f.seek(os_cfg.bluetooth.offset)
+            bluetooth_fw = f.read(os_cfg.bluetooth.length)
+
+        bluetool_path.unlink()
+
+        bluetooth_fw_path = wd / os_cfg.bluetooth.filename
+        with open(bluetooth_fw_path, "wb") as f:
+            f.write(bluetooth_fw)
+
         result.append(AddFile(
-            wd / os.path.basename(f),
-            f
+            bluetooth_fw_path,
+            "/private/etc/bluetool/" + os_cfg.bluetooth.filename
         ))
-
-    log("extracting Bluetooth firmware")
-
-    bluetool_path = wd / "BlueTool"
-    hfsplus_extract(os_raw_path, "/usr/sbin/BlueTool", bluetool_path)
-
-    with open(bluetool_path, "rb") as f:
-        f.seek(HOODOO_BLUETOOL_FW_OFF)
-        bluetooth_fw = f.read(HOODOO_BLUETOOL_FW_LEN)
-
-    bluetool_path.unlink()
-
-    bluetooth_fw_path = wd / HOODOO_BLUETOOTH_FW_NAME
-    with open(bluetooth_fw_path, "wb") as f:
-        f.write(bluetooth_fw)
-
-    result.append(AddFile(
-        bluetooth_fw_path,
-        "/private/etc/bluetool/" + HOODOO_BLUETOOTH_FW_NAME
-    ))
 
     os_raw_path.unlink()
 
     return result
 
-def patch_binary(src: Path, dest: Path, patches: dict):
+def patch_binary(src: Path, dest: Path, patches: List[Patch]):
     try:
         shutil.copyfile(src, dest)
     except shutil.SameFileError:
         pass
 
     with open(dest, "r+b") as f:
-        for o,v in patches.items():
-            f.seek(o)
-            f.write(v)
+        for p in patches:
+            f.seek(p.offset)
+            f.write(p.patch)
 
 def hoodoo_replace_comp(comp: str, iv: str, key: str, src: Path, wd: Path, ipsw: IPSW, build_identity: BuildIdentity) -> str:
     path = wd / extract_comp(comp, wd, ipsw, build_identity)
@@ -407,7 +377,7 @@ def hoodoo_process_iboots(wd: Path, ipsw: IPSW, build_identity: BuildIdentity) -
     # iBoot
     result["iBoot"] = extract_comp("iBoot", wd, ipsw, build_identity)
     
-    def patch_image3(src: Path, dest: Path, iv: str, key: str, patches: dict):
+    def patch_image3(src: Path, dest: Path, iv: str, key: str, patches: List[Patch]):
         raw_path = src.with_suffix(".raw")
         image3_decrypt(src, raw_path, iv, key)
 
@@ -423,14 +393,16 @@ def hoodoo_process_iboots(wd: Path, ipsw: IPSW, build_identity: BuildIdentity) -
 
     # iBSS
     ibss_name = extract_comp("iBSS", wd, ipsw, build_identity)
+    ibss_cfg = gCfg.source_ipsw.component("iBSS")
     ibss_orig_path = wd / ibss_name
-    patch_image3(ibss_orig_path, ibss_orig_path, HOODOO_IBSS_IV, HOODOO_IBSS_KEY, HOODOO_IBSS_PATCHES)
+    patch_image3(ibss_orig_path, ibss_orig_path, ibss_cfg.iv, ibss_cfg.key, ibss_cfg.patches)
     result["iBSS"] = ibss_name
 
     # iBEC
     ibec_name = extract_comp("iBEC", wd, ipsw, build_identity)
+    ibec_cfg = gCfg.source_ipsw.component("iBEC")
     ibec_orig_path = wd / ibec_name
-    patch_image3(ibec_orig_path, ibec_orig_path, HOODOO_IBEC_IV, HOODOO_IBEC_KEY, HOODOO_IBEC_PATCHES)
+    patch_image3(ibec_orig_path, ibec_orig_path, ibec_cfg.iv, ibec_cfg.key, ibec_cfg.patches)
     result["iBEC"] = ibec_name
 
     return result
@@ -458,23 +430,31 @@ def sundance_process_root_filesystem(wd: Path, ipsw: IPSW, build_identity: Build
 
     os_orig_path = wd / extract_comp("OS", wd, ipsw, build_identity)
     os_raw_path = os_orig_path.with_name("SundanceOS.dmg")
+    os_cfg = gCfg.base_ipsw.component("OS")
 
-    dmg_extract(os_orig_path, os_raw_path, SUNDANCE_ROOT_FS_KEY)
+    dmg_extract(os_orig_path, os_raw_path, os_cfg.key)
     os_orig_path.unlink()
 
     log("removing OTA update files")
     hfsplus_rmdir(os_raw_path, "/usr/standalone/update")
 
-    log("patching dyld shared cache")
+    log("patching files")
 
-    dsc_tmp_path = wd / "dsc"
-    hfsplus_extract(os_raw_path, "/System/Library/Caches/com.apple.dyld/dyld_shared_cache_armv7", dsc_tmp_path)
-    patch_binary(dsc_tmp_path, dsc_tmp_path, SUNDANCE_DSC_PATCHES)
-    hfsplus_replace(os_raw_path, dsc_tmp_path, "/System/Library/Caches/com.apple.dyld/dyld_shared_cache_armv7", mode=0o755)
-    dsc_tmp_path.unlink()
+    if os_cfg.file_patches:
+        for p in os_cfg.file_patches:
+            file_tmp_path = wd / "f"
+            hfsplus_extract(os_raw_path, p.path, file_tmp_path)
+            patch_binary(file_tmp_path, file_tmp_path, p.patches)
+            hfsplus_replace(os_raw_path, file_tmp_path, p.path, mode=0o755)
+            file_tmp_path.unlink()
 
-    for ld in SUNDANCE_LAUNCH_DAEMONS_TO_UNLIMIT:
-        _unlimit_launch_daemon(wd, os_raw_path, ld)
+    if os_cfg.launchdaemons_to_unlimit:
+        for ld in os_cfg.launchdaemons_to_unlimit:
+            _unlimit_launch_daemon(wd, os_raw_path, ld)
+
+    if os_cfg.copy_embedded_files:
+        for f in os_cfg.copy_embedded_files:
+            to_add.append(AddFile(RESOURCES_ROOT / f.embedded, f.dest))
 
     # `hfsplus` messes up if we create already existing folders/files,
     # `hfsplus` messes up if add files to non-existing folders,
@@ -550,18 +530,20 @@ def sundance_process_ramdisk(wd: Path, ipsw: IPSW, build_identity: BuildIdentity
 
     rd_orig_path = wd / extract_comp("RestoreRamDisk", wd, ipsw, build_identity)
     rd_raw_path = rd_orig_path.with_name("SundanceRamdisk.dmg")
+    rd_cfg = gCfg.base_ipsw.component("RestoreRamDisk")
 
-    image3_decrypt(rd_orig_path, rd_raw_path, SUNDANCE_RAMDISK_IV, SUNDANCE_RAMDISK_KEY)
+    image3_decrypt(rd_orig_path, rd_raw_path, rd_cfg.iv, rd_cfg.key)
 
     log("growing ramdisk")
     hfsplus_grow(rd_raw_path, SUNDANCE_RAMDISK_SIZE)
 
-    log("patching ASR")
-    asr_tmp_path = wd / "asr"
-    hfsplus_extract(rd_raw_path, "/usr/sbin/asr", asr_tmp_path)
-    patch_binary(asr_tmp_path, asr_tmp_path, SUNDANCE_ASR_PATCHES)
-    hfsplus_replace(rd_raw_path, asr_tmp_path, "/usr/sbin/asr", mode=0o755)
-    asr_tmp_path.unlink()
+    if rd_cfg.file_patches:
+        for p in rd_cfg.file_patches:
+            file_tmp_path = wd / "f"
+            hfsplus_extract(rd_raw_path, p.path, file_tmp_path)
+            patch_binary(file_tmp_path, file_tmp_path, p.patches)
+            hfsplus_replace(rd_raw_path, file_tmp_path, p.path, mode=0o755)
+            file_tmp_path.unlink()
 
     log("replacing rc.boot")
     hfsplus_replace(rd_raw_path, SCRIPT_ROOT / "rc_boot" / "rc.boot", "/etc/rc.boot", mode=0o755)
@@ -623,11 +605,15 @@ def assemble_bundle(
         log("wrote BuildManifest")
 
 def process(args):
+    global gCfg
+
     hoodoo_ipsw = IPSW(args.hoodoo)
     hoodoo_identity = hoodoo_ipsw.manifest.find_identity("n18ap", "Erase")
 
     sundance_ipsw = IPSW(args.sundance)
     sundance_identity = sundance_ipsw.manifest.find_identity("n88ap", "Erase")
+
+    gCfg = _load_config(hoodoo_identity, sundance_identity)
 
     with tempfile.TemporaryDirectory() as wd:
         wd = Path(wd)
@@ -638,15 +624,15 @@ def process(args):
         patched_comps.update(hoodoo_process_iboots(wd, hoodoo_ipsw, hoodoo_identity))
 
         log("packaging kernelcache")
-
-        patched_comps["KernelCache"] = patched_comps["RestoreKernelCache"] = hoodoo_replace_comp("KernelCache", HOODOO_KERNELCACHE_IV, HOODOO_KERNELCACHE_KEY, args.kernel, wd, hoodoo_ipsw, hoodoo_identity)
+        kc_cfg = gCfg.source_ipsw.component("KernelCache")
+        patched_comps["KernelCache"] = patched_comps["RestoreKernelCache"] = hoodoo_replace_comp("KernelCache", kc_cfg.iv, kc_cfg.key, args.kernel, wd, hoodoo_ipsw, hoodoo_identity)
 
         log("packaging DeviceTree")
-        patched_comps["DeviceTree"] = patched_comps["RestoreDeviceTree"] = hoodoo_replace_comp("DeviceTree", HOODOO_DEVICETREE_IV, HOODOO_DEVICETREE_KEY, args.devicetree, wd, hoodoo_ipsw, hoodoo_identity)
+        dt_cfg = gCfg.source_ipsw.component("DeviceTree")
+        patched_comps["DeviceTree"] = patched_comps["RestoreDeviceTree"] = hoodoo_replace_comp("DeviceTree", dt_cfg.iv, dt_cfg.key, args.devicetree, wd, hoodoo_ipsw, hoodoo_identity)
 
         add_files = []
         add_files += hoodoo_extract_firmwares(wd, hoodoo_ipsw, hoodoo_identity)
-        add_files += _add_misc_files()
 
         patched_comps["OS"] = sundance_process_root_filesystem(wd, sundance_ipsw, sundance_identity, add_files, args.jailbreak)
         patched_comps["RestoreRamDisk"] = sundance_process_ramdisk(wd, sundance_ipsw, sundance_identity)
@@ -660,12 +646,30 @@ def process(args):
             args.output
         )
 
+def _load_config(source_identity: BuildIdentity, base_identity: BuildIdentity) -> Config:
+    for root, dirs, files in os.walk(CONFIGS_ROOT):
+        for f in files:
+            full_path = Path(root) / f
+
+            if full_path.suffix != ".json":
+                continue
+
+            with open(full_path, "r") as f:
+                curr = json.load(f)
+
+            if curr["source_ipsw"]["device"] == source_identity.device and curr["source_ipsw"]["build"] == source_identity.manifest.build \
+                and curr["base_ipsw"]["device"] == base_identity.device and curr["base_ipsw"]["build"] == base_identity.manifest.build:
+                return dataclass_from_dict(Config, curr)
+
 SCRIPT_ROOT = Path(__file__).parent
-RESOURCES_ROOT = Path(__file__).parent / "resources"
+RESOURCES_ROOT = SCRIPT_ROOT / "resources"
+CONFIGS_ROOT = SCRIPT_ROOT / "configs"
 
 DEFAULT_KERNEL = SCRIPT_ROOT / "artifacts" / "kernelcache.n18ap.bin"
 DEFAULT_JAILBROKEN_KERNEL = SCRIPT_ROOT / "artifacts" / "kernelcache.jailbroken.n18ap.bin"
 DEFAULT_DEVICE_TREE = SCRIPT_ROOT / "artifacts" / "DeviceTree.n18ap.bin"
+
+gCfg = None
 
 def main():
     parser = argparse.ArgumentParser(description="convert iPod touch 3 iOS 5.1.1 IPSW to iOS 6.0")
