@@ -10,6 +10,7 @@ PROP ADD kern.jetsam_idle_offset 0a000000 device-tree/defaults
 PROP ADD bcom.roam.enabledenhanced 00000000 device-tree/arm-io/sdio
 PROP ADD dma-early-completion 01000000 device-tree/arm-io/sdio
 PROP ADD bcom.btc.params 060000004100000008000000C8AF000009000000983A00000A000000204E0000 device-tree/arm-io/sdio
+PROP ADD wlan.no-wapi 01000000 device-tree/arm-io/sdio
 # PROP SET compatible 626C7565746F6F746800 device-tree/arm-io/uart1/bluetooth
 
 # NAND

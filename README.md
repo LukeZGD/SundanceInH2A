@@ -17,8 +17,13 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
 ## Changelog
 <details>
 
-### rev2
+### rev2b
+* Fixed the bug when unclean shutdown (such as via hard reset) would break the untether
 
+### rev2a
+* Fixed Wi-Fi on **CH**-region iPods by disabling WAPI
+
+### rev2
 * Added jailbreak option (`-j` flag)
 
 ### rev1a
@@ -208,10 +213,7 @@ irecovery -n
 ## Known issues
 
 * Sometimes, Wi-Fi reconnects every minute or so
-    * Might be related to my router or something
-
-* Some iPods sold in China cannot use Wi-Fi
-    * Might be related to **WAPI** and corresponding daemon (`wapic`)
+    * Might be related to my router
 
 * Built-in speaker seems to be less loud compared to iOS 5
     * Headphones work fine
