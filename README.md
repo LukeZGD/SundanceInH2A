@@ -4,7 +4,7 @@ Run iOS 6 on your iPod touch 3!
 
 Apple never released iOS 6 for iPod touch 3rd-generation (2009). 13 years later I decided to fix it
 
-This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 (10A403) firmware to iPod touch 3 compatible firmware and run it untethered
+This repository contains tools and instructions to *convert* iPhone 3GS iOS 6 firmware to iPod touch 3 compatible firmware and run it untethered
 
 [Demo video on YouTube](https://www.youtube.com/watch?v=VTbShvf97kI)
 
@@ -14,6 +14,20 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
 
 ## Changelog
 <details>
+
+### rev3
+* Firmware patch metadata went to separate configs
+    * This allows you to use multiple different base IPSW combinations
+        * ...and even add your own by filling a corresponding config file
+
+    * Added code to automatically fix code-signature of patched Mach-Os
+        * So you don't have to hardcode new page hashes into such configs
+
+* Newly supported configs are iOS 6.1.3 (10B329) & 6.1.6 (10B500)
+
+* Added lock screen overlay image for Wallpaper preference bundle
+
+* Embedded executables now can run on as low as Mac OS X 10.7
 
 ### rev2b
 * Fixed the bug when unclean shutdown (such as via hard reset) would break the untether
@@ -42,7 +56,7 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
 ## Tutorial
 
 ### Requirements
-* A computer running Mac OS X 10.8+
+* A computer running Mac OS X 10.7+
     * Easy to port to Linux and even Windows - basically, you need to recompile everything under `executables/` for these platforms
 
 * Python 3.7+
@@ -52,7 +66,10 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
 ### Prerequisites
 * Files from this repository
 
-* iPhone 3GS iOS 6.0 (10A403) [IPSW](https://secure-appldnld.apple.com/iOS6/Restore/041-7173.20120919.sDDMh/iPhone2,1_6.0_10A403_Restore.ipsw)
+* iPhone 3GS iOS 6 IPSW. Supported builds:
+    1. [6.0 (10A403)](https://secure-appldnld.apple.com/iOS6/Restore/041-7173.20120919.sDDMh/iPhone2,1_6.0_10A403_Restore.ipsw)
+    2. [6.1.3 (10B329)](https://secure-appldnld.apple.com/iOS6.1/091-2371.20130319.715gt/iPhone2,1_6.1.3_10B329_Restore.ipsw)
+    3. [6.1.6 (10B500)](https://secure-appldnld.apple.com/iOS6.1/091-3457.20140221.Btt3e/iPhone2,1_6.1.6_10B500_Restore.ipsw)
 
 * iPod touch 3 iOS 5.1.1 (9B206) [IPSW](https://secure-appldnld.apple.com/iOS5.1.1/041-4300.20120427.WvgGq/iPod3,1_5.1.1_9B206_Restore.ipsw)
 
@@ -96,14 +113,14 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
 1. Change working directory to the downloaded repo and execute:
 
     ```shell
-    ➜  SundanceInH2A git:(master) ✗ ./Sundancer iPod3,1_5.1.1_9B206_Restore.ipsw iPhone2,1_6.0_10A403_Restore.ipsw iPod3,1_6.0_10A403_Custom
+    ➜  SundanceInH2A git:(master) ✗ ./Sundancer iPod3,1_5.1.1_9B206_Restore.ipsw iPhone2,1_6.x_10YNNN_Restore.ipsw iPod3,1_6.x_10YNNN_Custom
     ```
 
     Add `-j` option to apply jailbreak (on **rev2** and later)
 
     Change the paths accordingly, of course
 
-    If it all goes well, after 30 seconds (or up to 3-4 minutes on older hardware) you will see a new directory - `iPod3,1_6.0_10A403_Custom`. This is our new restore bundle - basically an unpacked IPSW (luckily, modern `idevicerestore` can process those)
+    If it all goes well, after 30 seconds (or up to 3-4 minutes on older hardware) you will see a new directory - `iPod3,1_6.x_10YNNN_Custom`. This is our new restore bundle - basically an unpacked IPSW (luckily, modern `idevicerestore` can process those)
 
     Log sample:
 
@@ -151,7 +168,7 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6.0 
 3. Start restore! `idevicerestore` is provided by this repo under `executables/`
 
     ```shell
-    ➜  SundanceInH2A git:(master) ✗ executables/idevicerestore -ey iPod3,1_6.0_10A403_Custom
+    ➜  SundanceInH2A git:(master) ✗ executables/idevicerestore -ey iPod3,1_6.x_10YNNN_Custom
     ```
 
 Restore is going to take around 5 minutes. If everything goes well, you'll end up on iOS 6 setup screen
@@ -202,7 +219,7 @@ irecovery -c "saveenv"
 irecovery -n
 ```
 
-`amfi=0xff` is added automatically by the exploit's shellcode to disable codesigning
+`amfi=0xff` and `launchctl_enforce_codesign=0` are always added automatically by the exploit's shellcode to disable Mach-O codesigning and LaunchDaemon signed cache (on iOS 6.1.x)
 
 ## Precautions
 
@@ -225,3 +242,8 @@ irecovery -n
 
 * Bluetooth audio devices cannot actually play
     * Seems to be related to `VirtualAudio` bundle, and it's a mess
+
+## Credits
+
+* **planetbeing**, **dborca**, **xerub** - for XPwn tools
+* **pimskeks** and other people behind **libimobiledevice** project - for libirecovery & idevicerestore
