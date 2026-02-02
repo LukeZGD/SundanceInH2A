@@ -2,11 +2,11 @@
 
 Fork with Linux support
 
-Run iOS 6 on your iPod touch 3!
+Run iOS 6 on your iPod touch 3 & iPad 1!
 
-Apple never released iOS 6 for iPod touch 3rd-generation (2009). 13 years later I decided to fix it
+Apple never released iOS 6 for iPod touch 3rd-generation (2009) and the original iPad (2010). 13 years later I decided to fix it
 
-This repository contains tools and instructions to *convert* iPhone 3GS iOS 6 firmware to iPod touch 3 compatible firmware and run it untethered
+This repository contains tools and instructions to *convert* original iOS 6 firmware to iPod touch 3 / iPad 1 compatible firmware and run it untethered
 
 [Demo video on YouTube](https://www.youtube.com/watch?v=VTbShvf97kI)
 
@@ -16,6 +16,19 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6 fi
 
 ## Changelog
 <details>
+
+### rev4a
+* Fixed Wi-Fi on Chinese region iPads
+
+### rev4
+* iPad 1 support
+    * Only iOS 6.1.3 is supported as of now
+    * Cellular variant has the baseband disabled and is automatically hactivated
+
+* External resources are now shipped slightly differently, please re-read the tutorial
+
+* iBoot heap metadata is now repaired properly after the exploit
+    * ...or at least I hope so
 
 ### rev3
 * Firmware patch metadata went to separate configs
@@ -67,36 +80,39 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6 fi
 ### Prerequisites
 * Files from this repository
 
-* iPhone 3GS iOS 6 IPSW. Supported builds:
-    1. [6.0 (10A403)](https://secure-appldnld.apple.com/iOS6/Restore/041-7173.20120919.sDDMh/iPhone2,1_6.0_10A403_Restore.ipsw)
-    2. [6.1.3 (10B329)](https://secure-appldnld.apple.com/iOS6.1/091-2371.20130319.715gt/iPhone2,1_6.1.3_10B329_Restore.ipsw)
-    3. [6.1.6 (10B500)](https://secure-appldnld.apple.com/iOS6.1/091-3457.20140221.Btt3e/iPhone2,1_6.1.6_10B500_Restore.ipsw)
+* Base IPSW - iOS 5.1.1 (9B206)
+    * [iPod touch 3](https://secure-appldnld.apple.com/iOS5.1.1/041-4300.20120427.WvgGq/iPod3,1_5.1.1_9B206_Restore.ipsw)
+    * [iPad 1](https://secure-appldnld.apple.com/iOS5.1.1/041-4292.02120427.Tkk0d/iPad1,1_5.1.1_9B206_Restore.ipsw)
 
-* iPod touch 3 iOS 5.1.1 (9B206) [IPSW](https://secure-appldnld.apple.com/iOS5.1.1/041-4300.20120427.WvgGq/iPod3,1_5.1.1_9B206_Restore.ipsw)
 
-* iOS 6 kernelcache for iPod touch 3
-    * This was never published by Apple in any form, but it's doable to assemble it from internal iOS 6 builds. Instructions eta son, but for time being... I *heard* that executing this command will yield a good kernelcache you can feed to this tool:
+* Destination iOS 6 IPSW
+    * iPod touch 3 uses iPhone 3GS firmwares:
+        1. [6.0 (10A403)](https://secure-appldnld.apple.com/iOS6/Restore/041-7173.20120919.sDDMh/iPhone2,1_6.0_10A403_Restore.ipsw)
+        2. [6.1.3 (10B329)](https://secure-appldnld.apple.com/iOS6.1/091-2371.20130319.715gt/iPhone2,1_6.1.3_10B329_Restore.ipsw)
+        3. [6.1.6 (10B500)](https://secure-appldnld.apple.com/iOS6.1/091-3457.20140221.Btt3e/iPhone2,1_6.1.6_10B500_Restore.ipsw)
+    
+    * iPad 1 uses iPad 2 (`iPad2,1`) firmware:
+        1. [6.1.3 (10B329)](https://secure-appldnld.apple.com/iOS6.1/091-2397.20130319.EEae9/iPad2,1_6.1.3_10B329_Restore.ipsw)
+
+* Resources that I cannot put straight into this repository - customly assembled kernelcaches & userspace libraries
+    * I *heard* that executing this command will yield them:
 
         ```shell
-        curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/7fa62c2cb54855d72b2a91c2aa3d57cab7318246/magic-A63970m.b64 | base64 -d | gunzip > kernelcache.n18ap.bin
+        cd /path/to/SundanceInH2A
+        curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/54c6ad7554710af454c87ec2d99f869e6e669c99/SundanceResources.b64 | base64 -D | tar -xvf -
         ```
 
-    * Put it into `artifacts/kernelcache.n18ap.bin`
+    * This command will write files to `artifacts` and `resources` directories
 
-    * Expected SHA256 hash:
+    * Expected SHA256 hashes:
         ```shell
-        ➜  SundanceInH2A git:(master) ✗ shasum -a 256 artifacts/kernelcache.n18ap.bin 
-        1f7a37b35ca8b1b42813a9e7773726f10faf9b0c0b0bacbc6057ecd6ab9d244d  artifacts/kernelcache.n18ap.bin
-        ```
-
-    * Jailbreak option needs a different kernel, put it into `artifacts/kernelcache.jailbroken.n18ap.bin`
-        ```shell
-        # download the kernel
-        ➜  SundanceInH2A git:(feat-jb) ✗ curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64 | base64 -d | gunzip > kernelcache.jailbroken.n18ap.bin
-
-        # validate SHA-256
-        ➜  SundanceInH2A git:(feat-jb) ✗ shasum -a 256 artifacts/kernelcache.jailbroken.n18ap.bin 
+        ➜  SundanceInH2A git:(master) ✗ shasum -a 256 artifacts/kernelcache.* resources/IMGSGX535GLDriver-*
+        b21f9c9578d636ee8353cfd4efade464f02ab5047e1436e98993b7d92fc5d3d0  artifacts/kernelcache.jailbroken.k48ap.bin
         17b230be63bf4760e3098c63316b3c1333a579c2664e0509cd9baac9508ae001  artifacts/kernelcache.jailbroken.n18ap.bin
+        e027aef775b4caac00b8c6bd73a8e9e2abedcf2bf6e426eee08ece3ff324cfcd  artifacts/kernelcache.k48ap.bin
+        1f7a37b35ca8b1b42813a9e7773726f10faf9b0c0b0bacbc6057ecd6ab9d244d  artifacts/kernelcache.n18ap.bin
+        6d2c965af511996f9717797978a50be7e0f47753d42b538e20693bd2e1b8cede  resources/IMGSGX535GLDriver-600
+        a3ce15a1d46480bfd6757e6a4db38b1b3b0c6a9dcd50cbdda1c9b8bb55a1f8d8  resources/IMGSGX535GLDriver-610
         ```
 
 * Pwned DFU tool
@@ -109,43 +125,45 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6 fi
 1. Change working directory to the downloaded repo and execute:
 
     ```shell
-    ➜  SundanceInH2A git:(master) ✗ ./Sundancer iPod3,1_5.1.1_9B206_Restore.ipsw iPhone2,1_6.x_10YNNN_Restore.ipsw iPod3,1_6.x_10YNNN_Custom
+    ➜  SundanceInH2A git:(master) ✗ ./Sundancer iOS511.ipsw iOS6.ipsw CUSTOM_BUNDLE
     ```
 
-    Add `-j` option to apply jailbreak (on **rev2** and later)
+    Where `iOS511.ipsw` is the original iOS 5.1.1, `iOS6.ipsw` is base iOS 6.x IPSW (check **Prerequisites** section) and finally `CUSTOM_BUNDLE` is a directory that will contain custom firmware
 
-    Change the paths accordingly, of course
+    Add `-j` option to apply jailbreak
 
-    If it all goes well, after 30 seconds (or up to 3-4 minutes on older hardware) you will see a new directory - `iPod3,1_6.x_10YNNN_Custom`. This is our new restore bundle - basically an unpacked IPSW (luckily, modern `idevicerestore` can process those)
+    If it all goes well, after 30 seconds (or up to 3-4 minutes on older hardware) restore bundle will be ready. *Bundle* as in sort-of unpacked IPSW (luckily, modern `idevicerestore` can process those)
 
     Log sample:
 
     ```shell
-    ➜  SundanceInH2A git:(master) ✗ ./Sundancer iPod3,1_5.1.1_9B206_Restore.ipsw iPhone2,1_6.0_10A403_Restore.ipsw iPod3,1_6.0_10A403_Custom
-    |  0.002 |  processing iOS 5 iBoots
-    |  0.014 |  packaging kernelcache
-    |  1.183 |  packaging DeviceTree
-    |  1.187 |  extracting iOS 5 root filesystem
-    |  3.938 |  extracting WLAN & multitouch firmwares
-    |  3.963 |  extracting Bluetooth firmware
-    |  3.971 |  extracting iOS 6 root filesystem
-    |  7.567 |  removing OTA update files
-    |  7.703 |  patching dyld shared cache
-    |  8.094 |  patching FairPlay LaunchDaemon
-    |  8.265 |  packaging iOS 6 root filesystem
-    | 32.929 |  extracting iOS 6 ramdisk
-    | 32.985 |  growing ramdisk
-    | 32.987 |  patching ASR
-    | 33.002 |  replacing rc.boot
-    | 33.014 |  putting exploit.dmg
-    | 33.021 |  moving options plist
-    | 33.024 |  packaging iOS 6 ramdisk
-    | 33.033 |  assembling bundle
-    | 33.129 |  wrote BuildManifest
-    | 33.132 |  DONE!
+    ➜  SundanceInH2A git:(feat-ipad-1) ✗ ./Sundancer iPod3,1_5.1.1_9B206_Restore.ipsw iPhone2,1_6.0_10A403_Restore.ipsw iPod3,1_6.0_10A403_Custom
+    |  0.003 |  processing iOS 5 iBoots
+    |  0.015 |  packaging kernelcache
+    |  1.186 |  packaging DeviceTree
+    |  1.191 |  extracting iOS 5 root filesystem
+    |  3.995 |  extracting WLAN & multitouch firmwares
+    |  4.021 |  extracting Bluetooth firmware
+    |  4.031 |  extracting iOS 6 root filesystem
+    |  7.718 |  removing OTA update files
+    |  7.852 |  patching files
+    |  8.247 |  unlimiting com.apple.absinthed.N88.plist LaunchDaemon
+    |  8.282 |  unlimiting com.apple.fairplayd.N88.plist LaunchDaemon
+    |  8.298 |  unlimiting com.apple.securekeyvaultd.N88.plist LaunchDaemon
+    |  8.316 |  adding Hactivator
+    |  8.483 |  packaging iOS 6 root filesystem
+    | 33.086 |  extracting iOS 6 ramdisk
+    | 33.149 |  growing ramdisk
+    | 33.168 |  replacing rc.boot
+    | 33.179 |  putting exploit.dmg
+    | 33.186 |  patching options plist
+    | 33.203 |  packaging iOS 6 ramdisk
+    | 33.212 |  assembling bundle
+    | 33.301 |  wrote BuildManifest
+    | 33.308 |  DONE!
     ```
 
-2. Enter pwned DFU on your iPod touch 3
+2. Enter pwned DFU on your device
     1. First, enter normal bootrom DFU (involves pressing and holding Home and Power buttons - there are plenty of guides online)
     2. Then run either **iPwnder** or **ipwndfu** with `-p` flag
 
@@ -164,7 +182,7 @@ This repository contains tools and instructions to *convert* iPhone 3GS iOS 6 fi
 3. Start restore! `idevicerestore` is provided by this repo under `executables/(arch)`. For example:
 
     ```shell
-    ➜  SundanceInH2A git:(master) ✗ executables/x86_64/idevicerestore -ey iPod3,1_6.0_10A403_Custom
+    ➜  SundanceInH2A git:(master) ✗ executables/idevicerestore -ey CUSTOM_BUNDLE
     ```
 
 Restore is going to take around 5 minutes. If everything goes well, you'll end up on iOS 6 setup screen
@@ -182,7 +200,7 @@ I patched iBEC to allow arbitrary NVRAM variable change, so you can remove it wi
 
 3. Start a restore, but kill `idevicerestore` immediately after it finished uploading iBEC
 
-4. Your iPod should light up its' display and appear on USB
+4. Your device should light up its' display and appear on USB
 
 5. Now you need `irecovery` which is included in `executables/(arch)`
 
@@ -225,6 +243,9 @@ irecovery -n
 
 * Even though I tested it quite well, there still might be various issues. Let me know if you find any
 
+* iPad 1 with Cellular will have baseband disabled and device activation broken
+    * Hactivation is implemented for such case, though
+
 * This tool uses an iBoot bug (HFS+ extent buffer overflow) to make it run untethered. I never encountered any issues with the current implementation of the exploit, but they still might happen making your device enter a boot loop - nothing irreversible though - see **Downgrade tutorial**
 
 ## Known issues
@@ -243,3 +264,4 @@ irecovery -n
 
 * **planetbeing**, **dborca**, **xerub** - for XPwn tools
 * **pimskeks** and other people behind **libimobiledevice** project - for libirecovery & idevicerestore
+* Whoever assembled the jailbreak bootstrap tarball, I personally stole it from [**aquila**](https://github.com/staturnzz/aquila)

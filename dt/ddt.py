@@ -34,7 +34,7 @@ class DTProperty:
         data = raw[DT_PROP_HDR_LEN : DT_PROP_HDR_LEN + length]
 
         return cls(name, flags, data), DT_PROP_HDR_LEN + align4(length)
-    
+
     def encode(self) -> bytes:
         res = bytearray(DT_KEY_LEN)
 
@@ -88,7 +88,7 @@ class DTNode:
             curr_off += length
 
         return cls(name, props, children), curr_off
-    
+
     @classmethod
     def decode(cls, raw: bytes) -> "DTNode":
         root, _ = cls._decode_internal(raw)
@@ -99,6 +99,9 @@ class DTNode:
 
     def add_child(self, data: bytes):
         self.children.append(DTNode.decode(data))
+
+    def remove_prop(self, prop: str):
+        self.props.remove(self.find_prop(prop))
 
     def encode(self) -> bytes:
         res = bytearray()
@@ -145,14 +148,14 @@ class DTNode:
         self.iterate(cb)
 
         return found
-    
+
     def find_prop(self, prop: str) -> DTProperty | None:
         return next(filter(lambda x: x.name == prop, self.props), None)
-    
+
 PATHS_TO_IGNORE = [
 #    "device-tree/arm-io/i2s0/audio0"
 ]
-    
+
 def do_diff(args):
     with open(args.one, "rb") as f:
         buf = f.read()
@@ -198,11 +201,12 @@ def do_diff(args):
                     "PROP ADD %s %s %s" % (one_prop.name, one_prop.data.hex(), path)
                 )
                 continue
-            
+
             if two_prop.name != "AAPL,phandle" and not two_prop.name.startswith("function-") and not two_prop.name.endswith("-parent"):
                 if two_prop.data != one_prop.data:
-                    print("PROP MODIFIED - %s => %s @ %s" % (one_prop.name, two_prop.data.hex(), path))
-                    continue
+                    differences.append(
+                        "PROP SET %s %s %s" % (two_prop.name, one_prop.data.hex(), path)
+                    )
 
         for two_prop in two_node.props:
             try:
@@ -262,6 +266,13 @@ def do_apply(args):
 
                 prop.data = data
 
+            elif act == "REMOVE":
+                name = expr[2]
+                path = expr[3]
+
+                node = dt.find_node(path)
+                node.remove_prop(name)
+
             else:
                 raise ValueError("unknown action for PROP - %s" % act)
 
@@ -292,7 +303,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser("ddt", description="DeviceTree diffing & patching tool")
 
     subparsers = parser.add_subparsers()
-    
+
     diff_parser = subparsers.add_parser("diff")
     diff_parser.set_defaults(func=do_diff)
     diff_parser.add_argument("one", type=Path, help="first DeviceTree")

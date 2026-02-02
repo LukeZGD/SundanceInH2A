@@ -78,6 +78,7 @@ class Defaults:
     kernel_cache: str
     kernel_cache_jailbroken: str
     device_tree: str
+    exploit: str
 
 @dataclass
 class Config:
@@ -452,6 +453,8 @@ def _unlimit_launch_daemon(wd: Path, dmg_path: Path, launch_daemon: str):
     plist_tmp_path.unlink()
 
 JAILBREAK_ROOTFS_MIBS = 128
+HACTIVATOR_DYLIB_DESTINATION = "/usr/lib/hactivator.dylib"
+LOCKDOWND_DAEMON_PLIST = "/System/Library/LaunchDaemons/com.apple.mobile.lockdown.plist"
 
 def destination_fw_process_root_filesystem(wd: Path, ipsw: IPSW, build_identity: BuildIdentity, to_add: List[AddFile], jailbreak: bool = False) -> str:
     log("extracting iOS 6 root filesystem")
@@ -479,6 +482,26 @@ def destination_fw_process_root_filesystem(wd: Path, ipsw: IPSW, build_identity:
     if os_cfg.launchdaemons_to_unlimit:
         for ld in os_cfg.launchdaemons_to_unlimit:
             _unlimit_launch_daemon(wd, os_raw_path, ld)
+
+    log("adding Hactivator")
+
+    to_add.append(AddFile(SCRIPT_ROOT / "hactivator" / "hactivator.dylib", HACTIVATOR_DYLIB_DESTINATION, mode=0o755))
+
+    lockdownd_plist_tmp_path = wd / "lockdownd.plist"
+    hfsplus_extract(os_raw_path, LOCKDOWND_DAEMON_PLIST, lockdownd_plist_tmp_path)
+
+    with open(lockdownd_plist_tmp_path, "rb") as f:
+        lockdownd_plist = plistlib.load(f)
+    
+    lockdownd_plist["EnvironmentVariables"] = {
+        "DYLD_INSERT_LIBRARIES" : HACTIVATOR_DYLIB_DESTINATION
+    }
+
+    with open(lockdownd_plist_tmp_path, "wb") as f:
+        plistlib.dump(lockdownd_plist, f)
+
+    hfsplus_replace(os_raw_path, lockdownd_plist_tmp_path, LOCKDOWND_DAEMON_PLIST)
+    lockdownd_plist_tmp_path.unlink()
 
     if os_cfg.copy_embedded_files:
         for f in os_cfg.copy_embedded_files:
@@ -553,6 +576,8 @@ def destination_fw_process_root_filesystem(wd: Path, ipsw: IPSW, build_identity:
 
     return os_dest
 
+OPTIONS_PLIST_DESTINATION = "/usr/local/share/restore/options.plist"
+
 def destination_fw_process_ramdisk(wd: Path, ipsw: IPSW, build_identity: BuildIdentity) -> str:
     log("extracting iOS 6 ramdisk")
 
@@ -577,11 +602,25 @@ def destination_fw_process_ramdisk(wd: Path, ipsw: IPSW, build_identity: BuildId
     hfsplus_replace(rd_raw_path, SCRIPT_ROOT / "rc_boot" / "rc.boot", "/etc/rc.boot", mode=0o755)
 
     log("putting exploit.dmg")
-    hfsplus_add(rd_raw_path, SCRIPT_ROOT / "exploit" / "exploit.dmg", "/exploit.dmg")
+    hfsplus_add(rd_raw_path, SCRIPT_ROOT / "exploit" / gCfg.defaults.exploit, "/exploit.dmg")
 
-    log("moving options plist")
+    log("patching options plist")
     hfsplus_mv(
-        rd_raw_path, "/usr/local/share/restore/options.%s.plist" % build_identity.device_short, "/usr/local/share/restore/options.plist")
+        rd_raw_path, "/usr/local/share/restore/options.%s.plist" % build_identity.device_short, OPTIONS_PLIST_DESTINATION)
+
+    options_tmp_path = wd / "options.plist"
+    hfsplus_extract(rd_raw_path, OPTIONS_PLIST_DESTINATION, options_tmp_path)
+
+    with open(options_tmp_path, "rb") as f:
+        options = plistlib.load(f)
+    
+    options["UpdateBaseband"] = False
+
+    with open(options_tmp_path, "wb") as f:
+        plistlib.dump(options, f)
+
+    hfsplus_replace(rd_raw_path, options_tmp_path, OPTIONS_PLIST_DESTINATION)
+    options_tmp_path.unlink()
 
     log("packaging iOS 6 ramdisk")
     rd_dest = "DestinationRamdiskPatched.img3"

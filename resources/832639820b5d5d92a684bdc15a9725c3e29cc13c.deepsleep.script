@@ -1,0 +1,17 @@
+# From 9B206
+
+#
+# BlueTool iProd0,1 deepsleep script
+#
+## open up the device at the correct speed (Baudrate will eventually come from env variable)
+device -D -S
+## Make sure the device is awake
+wake on
+## HCI Reset cause the device to disconnect from everything and return to a starting state
+hci reset
+## Set the sleep mode params
+bcm -s 0x01,0x00,0x00,0x01,0x01,0x00,0x01,0x00,0x00,0x00,0x00,0x01
+## Let the device go to sleep
+wake off
+## That was easy!
+quit

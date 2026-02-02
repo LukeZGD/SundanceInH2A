@@ -148,6 +148,7 @@
     "defaults": {
         "kernel_cache": "kernelcache.n18ap.bin",
         "kernel_cache_jailbroken": "kernelcache.jailbroken.n18ap.bin",
-        "device_tree": "DeviceTree.n18ap.bin"
+        "device_tree": "DeviceTree.n18ap.bin",
+        "exploit" : "exploit-n18.dmg"
     }
 }

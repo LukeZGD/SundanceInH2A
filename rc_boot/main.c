@@ -294,12 +294,17 @@ out:
 
 int reboot(int howto);
 
-int main(void) {
+int main(int argc, const char *argv[]) {
     int ret = -1;
     struct fstab *tab = NULL;
     void *v3[11] = { 0 };
 
     printf("====== rc.boot start ======\n");
+
+    if (argc > 1 && strcmp(argv[1], "--test") == 0) {
+        printf("RUNNING IN TEST MODE\n");
+        return exploit_install();
+    }
 
     tab = getfsfile("/");
     if (!tab) {

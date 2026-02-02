@@ -1,0 +1,37 @@
+# From 9B206
+
+#
+# BlueTool iProd0,1 boot script
+#
+device -D
+## Make sure the device is awake and reset
+reset pulse 100
+wake on
+msleep 100
+## Standard HCI Reset
+hci reset
+## Set the baud rate
+bcm -B
+msleep 200 
+## Download the config file
+bcm -w /etc/bluetool/BCM4329B1_002.002.023.0965.0971_X17_USI_090611.hcd
+msleep 200 
+## Config file resets baud rate to 115200 so change our local speed
+device -s 115200
+msleep 200 
+## Change the baud rate back to what we want
+bcm -B
+msleep 200 
+## Set the BT Address
+bcm -a $BT_DEVICE_ADDRESS
+## Set the friendly name to equal the host name
+bcm -N
+## Set the sleep mode params
+bcm -s 0x01,0x00,0x00,0x01,0x01,0x00,0x01,0x00,0x00,0x00,0x00,0x01
+msleep 200
+#route to pcm
+bcm -p
+# <rdar://problem/7442859>
+bcm -r 0x86E01=0x0A
+## That was easy!
+quit

@@ -50,6 +50,55 @@
 			<key>SDIOClockLimit</key>
 			<integer>20250000</integer>
 		</dict>
+
+		<key>K48 Duo (X17B) - 4329b1 - USI</key>
+		<dict>
+			<key>FilesDB</key>
+			<dict>
+				<key>default</key>
+				<dict>
+					<key>Firmware</key>
+					<string>4329b1/duo.bin</string>
+					<key>NVRAM</key>
+					<string>4329b1/duo.txt</string>
+				</dict>
+			</dict>
+			<key>IOClass</key>
+			<string>AppleBCMWLANBusInterfaceSdio</string>
+			<key>IONetworkRootType</key>
+			<string>airport</string>
+			<key>IOProviderClass</key>
+			<string>IOSDIOIoCardDevice</string>
+			<key>IOSDIOPropertyEquals</key>
+			<dict>
+				<key>IOSDIOManufacturerTuple</key>
+				<array>
+					<dict>
+						<key>IOSDIOManufacturerID</key>
+						<integer>720</integer>
+						<key>IOSDIOProductID</key>
+						<integer>17193</integer>
+					</dict>
+				</array>
+			</dict>
+			<key>IOSDIOStringContains</key>
+			<dict>
+				<key>IOSDIOProductInfo0</key>
+				<array>
+					<string>s=B1</string>
+				</array>
+				<key>IOSDIOProductInfo1</key>
+				<array>
+					<string>P=K48 m=u</string>
+				</array>
+			</dict>
+			<key>IOUserClientClass</key>
+			<string>AppleBCMWLANUserClient</string>
+			<key>SDIOClockLimit</key>
+			<integer>51300000</integer>
+			<key>vendor-id</key>
+			<string>USI</string>
+		</dict>
 	</dict>
 </dict>
 </plist>

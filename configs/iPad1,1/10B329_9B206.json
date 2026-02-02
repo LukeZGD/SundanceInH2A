@@ -1,0 +1,154 @@
+{
+    "original": {
+        "device": "k48ap",
+        "build": "9B206",
+        "manifest": [
+            {
+                "component": "iBSS",
+                "iv": "9c69f81db931108e8efc268de3f5d94d",
+                "key": "92f1cc2ca8362740734d69386fa6dde5582e18786777e1f9772d5dd364d873fb",
+                "patches": [
+                    {
+                        "name": "Image3 signature check",
+                        "offset": "0x613C",
+                        "patch": "00 20 18 60"
+                    }
+                ]
+            },
+            {
+                "component": "iBEC",
+                "iv": "bde7b0d5cf7861479d81eb23f99d2e9e",
+                "key": "1ba1f38e6a5b4841c1716c11acae9ee0fb471e50362a3b0dd8d98019f174a2f2",
+                "patches": [
+                    {
+                        "name": "Image3 signature check",
+                        "offset": "0x10E20",
+                        "patch": "00 20 18 60"
+                    },
+                    {
+                        "name": "debug-enabled",
+                        "offset": "0x11420",
+                        "patch": "01 20 01 20"
+                    },
+                    {
+                        "name": "boot-args injection",
+                        "offset": "0x12350",
+                        "patch": "18 B5 F2 5F 18 B5 F2 5F"
+                    },
+                    {
+                        "name": "boot-args",
+                        "offset": "0x2B518",
+                        "patch": "rd=md0 nand-enable-reformat=1 -progress amfi=0xff serial=3"
+                    },
+                    {
+                        "name": "allow any var in `setenv`",
+                        "offset": "0xE5D0",
+                        "patch": "00 BF"
+                    }
+                ]
+            },
+            {
+                "component": "DeviceTree",
+                "iv": "e0a3aa63dae431e573c9827dd3636dd1",
+                "key": "50208af7c2de617854635fb4fc4eaa8cddab0e9035ea25abf81b0fa8b0b5654f"
+            },
+            {
+                "component": "KernelCache",
+                "iv": "140984858e5c7fe245a43596f5370a0e",
+                "key": "fc6733108c9bd4b2179257102f81998089437c2c58cbdb8752fd40a442bd9434"
+            },
+            {
+                "component": "OS",
+                "key": "f7bb9fd8aa3102484ab9c847dacfd3d73f1f430acb49ed7a422226f2410acee17664c91b",
+                "copy_files": [
+                    "/usr/share/firmware/multitouch/Common.mtprops",
+                    "/usr/share/firmware/multitouch/iPad.mtprops",
+                    "/usr/share/firmware/wifi/4329b1/duo-wapi.bin",
+                    "/usr/share/firmware/wifi/4329b1/duo.bin",
+                    "/usr/share/firmware/wifi/4329b1/duo.txt"
+                ],
+                "bluetooth": {
+                    "filename": "BCM4329B1_002.002.023.0965.0971_X17_USI_090611.hcd",
+                    "offset": "0x1DB20",
+                    "length": "0x41AB"
+                }
+            }
+        ]
+    },
+    "destination": {
+        "device": "k93ap",
+        "build": "10B329",
+        "manifest": [
+            {
+                "component": "OS",
+                "key": "70f5ac054bf50a522fd39071f6acbd92954804599c1507b881d7d9c4026005e3867bfab0",
+                "launchdaemons_to_unlimit": [
+                    "/System/Library/LaunchDaemons/com.apple.fairplayd.K93.plist",
+                    "/System/Library/LaunchDaemons/com.apple.securekeyvaultd.K93.plist"
+                ],
+                "file_patches": [
+                    {
+                        "path": "/System/Library/Caches/com.apple.dyld/dyld_shared_cache_armv7",
+                        "patches": [
+                            {
+                                "name": "Product ID",
+                                "offset": "0x8881D90",
+                                "patch": "16 27"
+                            },
+                            {
+                                "name": "K48 CoreMotion",
+                                "offset": "0x1706A78",
+                                "patch": "00 BF 00 BF 00 BF 00 BF 00 BF 00 BF 00 BF 0C 20"
+                            }
+                        ]
+                    }
+                ],
+                "copy_embedded_files": [
+                    {
+                        "embedded" : "K48AP.plist",
+                        "dest" : "/System/Library/CoreServices/SpringBoard.app/K48AP.plist"
+                    },
+                    {
+                        "embedded" : "832639820b5d5d92a684bdc15a9725c3e29cc13c.boot.script",
+                        "dest" : "/private/etc/bluetool/832639820b5d5d92a684bdc15a9725c3e29cc13c.boot.script"
+                    },
+                    {
+                        "embedded" : "832639820b5d5d92a684bdc15a9725c3e29cc13c.init.script",
+                        "dest" : "/private/etc/bluetool/832639820b5d5d92a684bdc15a9725c3e29cc13c.init.script"
+                    },
+                    {
+                        "embedded" : "832639820b5d5d92a684bdc15a9725c3e29cc13c.deepsleep.script",
+                        "dest" : "/private/etc/bluetool/832639820b5d5d92a684bdc15a9725c3e29cc13c.deepsleep.script"
+                    },
+                    {
+                        "embedded" : "IMGSGX535GLDriver-610",
+                        "dest" : "/System/Library/Extensions/IMGSGX535GLDriver.bundle/IMGSGX535GLDriver"
+                    }
+                ]
+            },
+            {
+                "component": "RestoreRamDisk",
+                "iv": "8775b711d2e09e332f8ebfbebe63cce7",
+                "key": "d406dc4343eedf9d6567e8303ba39a21f81f99bf701840c888963af58a84fb8f",
+                "file_patches": [
+                    {
+                        "path": "/usr/sbin/asr",
+                        "patches": [
+                            {
+                                "name": "Image signature check",
+                                "offset": "0x12EC8",
+                                "patch": "F2 E7"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "defaults": {
+        "kernel_cache": "kernelcache.k48ap.bin",
+        "kernel_cache_jailbroken": "kernelcache.jailbroken.k48ap.bin",
+        "device_tree": "DeviceTree.k48ap.bin",
+        "exploit" : "exploit-k48.dmg"
+    }
+}
